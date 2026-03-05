@@ -8,24 +8,30 @@
 #include <thread>
 #include <chrono>
 
-// On inclut votre fichier poker2.cpp
-// Note: Normalement on inclut un .hpp, mais pour simplifier, on inclut le .cpp
-// Plus tard, on pourra séparer en .hpp et .cpp
-
-
 class PokerGameBridge {
 private:
     TableDePoker& table;
     int nbJoueurs;
     
-    // Variables du jeu (références vers celles de poker2.cpp)
-    std::vector<JetonsJoueur>& jetons;
-    std::vector<bool>& joueurElimine;
-    std::vector<MisesJoueur>& misesJoueurs;
-    int& pot;
+    // Variables du jeu (VALEURS, pas références !)
+    std::vector<JetonsJoueur> jetons;
+    std::vector<bool> joueurElimine;
+    std::vector<MisesJoueur> misesJoueurs;
+    std::vector<Carte> cartesCommunes;
+    std::vector<std::vector<Carte>> mainsJoueurs;
+    std::vector<Carte> conteneur;  // Le deck
+    int pot;                        // Pas de & !
     int donneur;
+    int miseActuelle;
+    std::vector<bool> joueurActif;
+    int grosseBlind;
     
-    // État du jeu
+    // Nouvelles variables
+    int joueurCourant;
+    int petiteBlind;
+    int joueurPetiteBlind;
+    int joueurGrosseBlind;
+    
     enum class EtatJeu {
         ATTENTE,
         PREFLOP,
@@ -36,27 +42,18 @@ private:
     };
     
     EtatJeu etatActuel;
-    std::vector<Carte> cartesCommunes;
-    std::vector<std::vector<Carte>> mainsJoueurs;
-    vector<Carte> conteneur;  // Le deck
     
 public:
-    // Constructeur qui initialise les références
     PokerGameBridge(TableDePoker& tableRef, int nbJ);
-    
-    // Fonctions de jeu
     void demarrerMain();
     void jouerPreFlop();
     void jouerFlop();
     void jouerTurn();
     void jouerRiver();
     void jouerShowdown();
-    
-    
-    // Mise à jour de l'affichage
     void synchroniserAffichage();
     
-    // Fonctions d'action des joueurs (seront appelées par les boutons)
+    // Actions
     void actionFold(int joueur);
     void actionCheck(int joueur);
     void actionCall(int joueur);

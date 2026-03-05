@@ -6,6 +6,7 @@
 
 int main() {
     std::cout << "=== POKER TEXAS HOLD'EM AVEC SFML ===" << std::endl;
+    std::cout << "Cliquez sur les boutons pour tester - Les coordonnées s'afficheront" << std::endl;
     
     // Créer la table
     TableDePoker table;
@@ -20,7 +21,40 @@ int main() {
     
     while (table.estOuvert()) {
         // Gérer les événements SFML
-        table.gererEvenements();
+
+        sf::Event event;
+        while (table.getWindow().pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                table.fermer();
+            }
+            
+            // Gérer les clics de souris
+            // Remplacer la section des clics par :
+            if (event.type == sf::Event::MouseButtonPressed) {
+                if (event.mouseButton.button == sf::Mouse::Left) {
+                    sf::Vector2f souris = table.getPositionSouris();
+                    
+                    
+                    if (table.boutonFoldClique(souris)) {
+                        std::cout << "✅ Clic sur Fold" << std::endl;
+                        jeu.actionFold(0);  // Pour l'instant, joueur 0, à améliorer plus tard
+                    }
+                    else if (table.boutonCheckClique(souris)) {
+                        std::cout << "✅ Clic sur Check" << std::endl;
+                        jeu.actionCheck(0);
+                    }
+                    else if (table.boutonCallClique(souris)) {
+                        std::cout << "✅ Clic sur Call" << std::endl;
+                        jeu.actionCall(0);
+                    }
+                    else if (table.boutonRaiseClique(souris)) {
+                        std::cout << "✅ Clic sur Raise" << std::endl;
+                        jeu.actionRaise(0, 40);
+                    }
+                    
+                }
+            }
+        }
         
         // Effacer et redessiner
         table.effacer();

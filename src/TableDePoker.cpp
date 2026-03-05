@@ -1,5 +1,6 @@
 #include "../include/TableDePoker.hpp"
 
+
 TableDePoker::TableDePoker() {
     // Créer la fenêtre
     window.create(sf::VideoMode(LARGEUR, HAUTEUR), "Poker Texas Hold'em", sf::Style::Titlebar | sf::Style::Close);
@@ -59,6 +60,31 @@ TableDePoker::TableDePoker() {
     }
     // Charger une texture pour la table (si disponible)
     // Pour l'instant, on dessinera simplement un cercle vert
+    
+    // Initialiser les boutons
+    actionsBoutons = {"Fold", "Check", "Call", "Raise"};
+    couleursBoutons = {sf::Color::Red, sf::Color::Yellow, sf::Color::Green, sf::Color::Blue};
+    texteCall = "Call";
+    texteRaise = "Raise";
+    
+    for (int i = 0; i < 4; i++) {
+        sf::RectangleShape bouton(sf::Vector2f(100, 40));
+        bouton.setFillColor(couleursBoutons[i]);
+        bouton.setOutlineThickness(2);
+        bouton.setOutlineColor(sf::Color::Black);
+        bouton.setPosition(300 + i * 120, 550);
+        boutons.push_back(bouton);
+        
+        sf::RectangleShape texteRect(sf::Vector2f(80, 25));
+        texteRect.setFillColor(sf::Color::White);
+        texteRect.setOutlineThickness(1);
+        texteRect.setOutlineColor(sf::Color::Black);
+        texteRect.setPosition(310 + i * 120, 558);
+        textesBoutons.push_back(texteRect);
+    }
+    joueurCourant = 0;  // Initialisation
+    // Ajoutez cette ligne à la fin du constructeur, avant l'accolade fermante
+    montantPot = 0;  // Initialisation du pot à 0
 }
 
 bool TableDePoker::estOuvert() {
@@ -100,6 +126,45 @@ void TableDePoker::dessinerTable() {
     centre.setFillColor(sf::Color(50, 150, 50));
     centre.setPosition(350, 250);
     window.draw(centre);
+    
+    // 🆕 DESSINER LE POT AU CENTRE
+    // Rectangle de fond pour le pot
+    sf::RectangleShape potFond(sf::Vector2f(150, 60));
+    potFond.setFillColor(sf::Color(139, 69, 19, 200)); // Brun semi-transparent
+    potFond.setOutlineThickness(3);
+    potFond.setOutlineColor(sf::Color::White);
+    potFond.setPosition(525, 450);
+    window.draw(potFond);
+    
+    // Texte "POT"
+    sf::Text textePot;
+    textePot.setFont(police);
+    textePot.setString("POT");
+    textePot.setCharacterSize(24);
+    textePot.setFillColor(sf::Color::White);
+    textePot.setStyle(sf::Text::Bold);
+    
+    sf::FloatRect bounds = textePot.getLocalBounds();
+    textePot.setPosition(
+        525 + (150 - bounds.width) / 2,
+        455 
+    );
+    window.draw(textePot);
+    
+    // Montant du pot
+    sf::Text texteMontant;
+    texteMontant.setFont(police);
+    texteMontant.setString(std::to_string(montantPot));
+    texteMontant.setCharacterSize(28);
+    texteMontant.setFillColor(sf::Color::Yellow);
+    texteMontant.setStyle(sf::Text::Bold);
+    
+    bounds = texteMontant.getLocalBounds();
+    texteMontant.setPosition(
+        525 + (150 - bounds.width) / 2,
+        480
+    );
+    window.draw(texteMontant);
 }
 
 void TableDePoker::dessinerJoueurs(int nbJoueurs) {
@@ -118,10 +183,26 @@ void TableDePoker::dessinerJoueurs(int nbJoueurs) {
             joueur.setFillColor(sf::Color::Red);    // Presque ruiné
         }
         
-        joueur.setOutlineThickness(3);
-        joueur.setOutlineColor(sf::Color::White);
+        // 🆕 Si c'est le joueur courant, ajouter un contour doré plus épais
+        if (i == joueurCourant) {
+            joueur.setOutlineThickness(5);
+            joueur.setOutlineColor(sf::Color::Yellow);
+        } else {
+            joueur.setOutlineThickness(3);
+            joueur.setOutlineColor(sf::Color::White);
+        }
+        
         joueur.setPosition(positionsJoueurs[i].x, positionsJoueurs[i].y);
         window.draw(joueur);
+        
+        // 🆕 Ajouter une petite flèche ou étoile pour le joueur courant
+        if (i == joueurCourant) {
+            sf::CircleShape etoile(10, 3); // Triangle
+            etoile.setFillColor(sf::Color::Yellow);
+            etoile.setRotation(90);
+            etoile.setPosition(positionsJoueurs[i].x + 10, positionsJoueurs[i].y - 20);
+            window.draw(etoile);
+        }
         
         // Rectangle pour le numéro du joueur
         sf::RectangleShape numeroRect(sf::Vector2f(25, 25));
@@ -139,10 +220,8 @@ void TableDePoker::dessinerJoueurs(int nbJoueurs) {
         nomRect.setPosition(positionsJoueurs[i].x - 10, positionsJoueurs[i].y - 25);
         window.draw(nomRect);
         
-        // Rectangle pour les jetons - avec couleur variable
+        // Rectangle pour les jetons
         sf::RectangleShape jetonsRect(sf::Vector2f(70, 20));
-        
-        // Changer la couleur du rectangle des jetons selon le montant
         if (jetonsJoueurs[i] >= 200) {
             jetonsRect.setFillColor(sf::Color(255, 215, 0, 200)); // Or
         } else if (jetonsJoueurs[i] >= 100) {
@@ -156,9 +235,9 @@ void TableDePoker::dessinerJoueurs(int nbJoueurs) {
         jetonsRect.setPosition(positionsJoueurs[i].x - 15, positionsJoueurs[i].y - 5);
         window.draw(jetonsRect);
         
-        // Petit indicateur de jetons (plus il y a de traits, plus il a de jetons)
-        int nbTraits = jetonsJoueurs[i] / 50; // 1 trait par 50 jetons
-        if (nbTraits > 5) nbTraits = 5; // Maximum 5 traits
+        // Petit indicateur de jetons
+        int nbTraits = jetonsJoueurs[i] / 50;
+        if (nbTraits > 5) nbTraits = 5;
         
         for (int t = 0; t < nbTraits; t++) {
             sf::RectangleShape trait(sf::Vector2f(5, 10));
@@ -185,24 +264,37 @@ void TableDePoker::dessinerCartesCommunes() {
 }
 
 void TableDePoker::dessinerBoutons() {
-    // Boutons d'action (en bas)
-    std::vector<std::string> actions = {"Fold", "Check", "Call", "Raise"};
-    std::vector<sf::Color> couleurs = {sf::Color::Red, sf::Color::Yellow, sf::Color::Green, sf::Color::Blue};
-    
     for (int i = 0; i < 4; i++) {
-        sf::RectangleShape bouton(sf::Vector2f(100, 50));
-        bouton.setFillColor(couleurs[i]);
-        bouton.setOutlineThickness(2);
-        bouton.setOutlineColor(sf::Color::Black);
-        bouton.setPosition(300 + i * 150, 700);
-        window.draw(bouton);
+        // Dessiner le bouton
+        window.draw(boutons[i]);
         
+        // Dessiner le rectangle blanc du texte
+        window.draw(textesBoutons[i]);
+        
+        // Maintenant on peut dessiner le vrai texte avec la police
         sf::Text texteBouton;
         texteBouton.setFont(police);
-        texteBouton.setString(actions[i]);
-        texteBouton.setCharacterSize(20);
+        
+        // Choisir le texte selon le bouton
+        if (i == 2) { // Call
+            texteBouton.setString(texteCall);
+        } else if (i == 3) { // Raise
+            texteBouton.setString(texteRaise);
+        } else {
+            texteBouton.setString(actionsBoutons[i]);
+        }
+        
+        texteBouton.setCharacterSize(18);
         texteBouton.setFillColor(sf::Color::Black);
-        texteBouton.setPosition(330 + i * 150, 715);
+        texteBouton.setStyle(sf::Text::Bold);
+        
+        // Centrer le texte sur le bouton
+        sf::FloatRect bounds = texteBouton.getLocalBounds();
+        texteBouton.setPosition(
+            boutons[i].getPosition().x + (boutons[i].getSize().x - bounds.width) / 2,
+            boutons[i].getPosition().y + (boutons[i].getSize().y - bounds.height) / 2 - 5
+        );
+        
         window.draw(texteBouton);
     }
 }
@@ -224,4 +316,76 @@ void TableDePoker::mettreAJourJetons(int joueur, int nouveauxJetons) {
         jetonsJoueurs[joueur] = nouveauxJetons;
         std::cout << "Joueur " << joueur + 1 << " a maintenant " << nouveauxJetons << " jetons" << std::endl;
     }
+}
+
+// ===== NOUVEAU CODE À AJOUTER (AVANT LA DERNIÈRE ACCCOLADE) =====
+
+sf::Vector2f TableDePoker::getPositionSouris() {
+    return sf::Vector2f(sf::Mouse::getPosition(window));
+}
+
+bool TableDePoker::boutonFoldClique(sf::Vector2f souris) {
+    if (boutons.size() > 0) {
+        bool clique = boutons[0].getGlobalBounds().contains(souris);
+        std::cout << "Test Fold: bouton à (" << boutons[0].getPosition().x 
+                  << "," << boutons[0].getPosition().y 
+                  << "), souris à (" << souris.x << "," << souris.y 
+                  << ") => " << (clique ? "OUI" : "NON") << std::endl;
+        return clique;
+    }
+    return false;
+}
+
+bool TableDePoker::boutonCheckClique(sf::Vector2f souris) {
+    if (boutons.size() > 1) {
+        bool clique = boutons[1].getGlobalBounds().contains(souris);
+        std::cout << "Test Check: bouton à (" << boutons[1].getPosition().x 
+                  << "," << boutons[1].getPosition().y 
+                  << "), souris à (" << souris.x << "," << souris.y 
+                  << ") => " << (clique ? "OUI" : "NON") << std::endl;
+        return clique;
+    }
+    return false;
+}
+
+bool TableDePoker::boutonCallClique(sf::Vector2f souris) {
+    if (boutons.size() > 2) {
+        bool clique = boutons[2].getGlobalBounds().contains(souris);
+        std::cout << "Test Call: bouton à (" << boutons[2].getPosition().x 
+                  << "," << boutons[2].getPosition().y 
+                  << "), souris à (" << souris.x << "," << souris.y 
+                  << ") => " << (clique ? "OUI" : "NON") << std::endl;
+        return clique;
+    }
+    return false;
+}
+
+bool TableDePoker::boutonRaiseClique(sf::Vector2f souris) {
+    if (boutons.size() > 3) {
+        bool clique = boutons[3].getGlobalBounds().contains(souris);
+        std::cout << "Test Raise: bouton à (" << boutons[3].getPosition().x 
+                  << "," << boutons[3].getPosition().y 
+                  << "), souris à (" << souris.x << "," << souris.y 
+                  << ") => " << (clique ? "OUI" : "NON") << std::endl;
+        return clique;
+    }
+    return false;
+}
+
+void TableDePoker::setBoutonCallTexte(const std::string& texte) {
+    texteCall = texte;
+}
+
+void TableDePoker::setBoutonRaiseTexte(const std::string& texte) {
+    texteRaise = texte;
+}
+
+// ===== FIN DU NOUVEAU CODE =====
+
+void TableDePoker::setJoueurCourant(int joueur) {
+    joueurCourant = joueur;
+}
+
+void TableDePoker::setMontantPot(int montant) {
+    montantPot = montant;
 }

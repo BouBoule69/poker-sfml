@@ -37,6 +37,9 @@ private:
     // Texte spécial pour Call et Raise
     std::string texteCall;
     std::string texteRaise;
+    int joueurCourant;  // Pour savoir quel joueur doit jouer
+    int montantPot;  // Pour stocker le montant du pot
+
 public:
     TableDePoker();
     bool estOuvert();
@@ -57,6 +60,9 @@ public:
 
     // NOUVELLE méthode pour mettre à jour les jetons d'un joueur
     void mettreAJourJetons(int joueur, int nouveauxJetons);
+
+    void setJoueurCourant(int joueur);
+    void setMontantPot(int montant);
     
     // Nouvelles méthodes pour gérer les clics
     bool boutonFoldClique(sf::Vector2f souris);
