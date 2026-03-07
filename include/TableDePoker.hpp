@@ -39,6 +39,8 @@ private:
     std::string texteRaise;
     int joueurCourant;  // Pour savoir quel joueur doit jouer
     int montantPot;  // Pour stocker le montant du pot
+    std::vector<Carte> cartes;  // Pour stocker les vraies cartes communes
+    std::vector<std::vector<Carte>> mainsJoueurs;  // Pour stocker les mains de chaque joueur
 
 public:
     TableDePoker();
@@ -76,6 +78,14 @@ public:
     // Pour mettre à jour le texte des boutons
     void setBoutonCallTexte(const std::string& texte);
     void setBoutonRaiseTexte(const std::string& texte);
+
+    // pour montrer les cartes
+    std::string getSymboleCarte(const Carte& c);
+    sf::Color getCouleurCarte(const Carte& c);
+    std::string getSymboleCouleur(const Carte& c); 
+
+    // Dans la section public:, ajoutez :
+    void dessinerSymboleCouleur(sf::RenderWindow& window, Couleur couleur, sf::Vector2f position, float taille, sf::Color teinte);
 
     // Getters
     sf::RenderWindow& getWindow() { return window; }

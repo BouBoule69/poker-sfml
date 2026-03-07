@@ -10,7 +10,7 @@ TableDePoker::TableDePoker() {
     if (!police.loadFromFile("fonts/arial.ttf")) {
         // Si la police n'est pas trouvée, on utilise la police par défaut du système
         std::cout << "Attention: Police non trouvée, utilisation de la police par défaut" << std::endl;
-        // Sur Ubuntu, vous pouvez installer arial avec : sudo apt install msttcorefonts -qq
+        
     }
     
     // Définir les positions des joueurs (autour de la table)
@@ -82,9 +82,13 @@ TableDePoker::TableDePoker() {
         texteRect.setPosition(310 + i * 120, 558);
         textesBoutons.push_back(texteRect);
     }
+     // Initialiser les vecteurs pour les cartes
+     mainsJoueurs.resize(6);  // Pour 6 joueurs maximum
+     cartes.clear();  // Pas de cartes communes au départ
     joueurCourant = 0;  // Initialisation
     // Ajoutez cette ligne à la fin du constructeur, avant l'accolade fermante
     montantPot = 0;  // Initialisation du pot à 0
+
 }
 
 bool TableDePoker::estOuvert() {
@@ -127,7 +131,7 @@ void TableDePoker::dessinerTable() {
     centre.setPosition(350, 250);
     window.draw(centre);
     
-    // 🆕 DESSINER LE POT AU CENTRE
+    // DESSINER LE POT AU CENTRE
     // Rectangle de fond pour le pot
     sf::RectangleShape potFond(sf::Vector2f(150, 60));
     potFond.setFillColor(sf::Color(139, 69, 19, 200)); // Brun semi-transparent
@@ -169,42 +173,42 @@ void TableDePoker::dessinerTable() {
 
 void TableDePoker::dessinerJoueurs(int nbJoueurs) {
     for (int i = 0; i < nbJoueurs && i < 6; i++) {
-        // Cercle du joueur - la couleur change selon le nombre de jetons
-        sf::CircleShape joueur(35);
+        // Cercle du joueur
+        sf::CircleShape cercleJoueur(35);
         
-        // Choisir la couleur selon le nombre de jetons
+        // Couleur selon les jetons
         if (jetonsJoueurs[i] >= 200) {
-            joueur.setFillColor(sf::Color::Green);  // Riche !
+            cercleJoueur.setFillColor(sf::Color::Green);
         } else if (jetonsJoueurs[i] >= 100) {
-            joueur.setFillColor(sf::Color::Blue);   // Moyen
+            cercleJoueur.setFillColor(sf::Color::Blue);
         } else if (jetonsJoueurs[i] >= 50) {
-            joueur.setFillColor(sf::Color::Yellow); // Faible
+            cercleJoueur.setFillColor(sf::Color::Yellow);
         } else {
-            joueur.setFillColor(sf::Color::Red);    // Presque ruiné
+            cercleJoueur.setFillColor(sf::Color::Red);
         }
         
-        // 🆕 Si c'est le joueur courant, ajouter un contour doré plus épais
+        // Contour spécial pour le joueur courant
         if (i == joueurCourant) {
-            joueur.setOutlineThickness(5);
-            joueur.setOutlineColor(sf::Color::Yellow);
+            cercleJoueur.setOutlineThickness(5);
+            cercleJoueur.setOutlineColor(sf::Color::Yellow);
         } else {
-            joueur.setOutlineThickness(3);
-            joueur.setOutlineColor(sf::Color::White);
+            cercleJoueur.setOutlineThickness(3);
+            cercleJoueur.setOutlineColor(sf::Color::White);
         }
         
-        joueur.setPosition(positionsJoueurs[i].x, positionsJoueurs[i].y);
-        window.draw(joueur);
+        cercleJoueur.setPosition(positionsJoueurs[i].x, positionsJoueurs[i].y);
+        window.draw(cercleJoueur);
         
-        // 🆕 Ajouter une petite flèche ou étoile pour le joueur courant
+        // Flèche pour le joueur courant
         if (i == joueurCourant) {
-            sf::CircleShape etoile(10, 3); // Triangle
-            etoile.setFillColor(sf::Color::Yellow);
-            etoile.setRotation(90);
-            etoile.setPosition(positionsJoueurs[i].x + 10, positionsJoueurs[i].y - 20);
-            window.draw(etoile);
+            sf::CircleShape fleche(10, 3);
+            fleche.setFillColor(sf::Color::Yellow);
+            fleche.setRotation(90);
+            fleche.setPosition(positionsJoueurs[i].x + 10, positionsJoueurs[i].y - 20);
+            window.draw(fleche);
         }
         
-        // Rectangle pour le numéro du joueur
+        // Rectangle blanc pour le numéro
         sf::RectangleShape numeroRect(sf::Vector2f(25, 25));
         numeroRect.setFillColor(sf::Color::White);
         numeroRect.setOutlineThickness(1);
@@ -212,7 +216,7 @@ void TableDePoker::dessinerJoueurs(int nbJoueurs) {
         numeroRect.setPosition(positionsJoueurs[i].x + 20, positionsJoueurs[i].y + 10);
         window.draw(numeroRect);
         
-        // Rectangle pour le nom
+        // Rectangle gris pour le nom
         sf::RectangleShape nomRect(sf::Vector2f(50, 20));
         nomRect.setFillColor(sf::Color(100, 100, 100, 200));
         nomRect.setOutlineThickness(1);
@@ -223,43 +227,117 @@ void TableDePoker::dessinerJoueurs(int nbJoueurs) {
         // Rectangle pour les jetons
         sf::RectangleShape jetonsRect(sf::Vector2f(70, 20));
         if (jetonsJoueurs[i] >= 200) {
-            jetonsRect.setFillColor(sf::Color(255, 215, 0, 200)); // Or
+            jetonsRect.setFillColor(sf::Color(255, 215, 0, 200));
         } else if (jetonsJoueurs[i] >= 100) {
-            jetonsRect.setFillColor(sf::Color(255, 255, 0, 200)); // Jaune
+            jetonsRect.setFillColor(sf::Color(255, 255, 0, 200));
         } else {
-            jetonsRect.setFillColor(sf::Color(255, 165, 0, 200)); // Orange
+            jetonsRect.setFillColor(sf::Color(255, 165, 0, 200));
         }
-        
         jetonsRect.setOutlineThickness(1);
         jetonsRect.setOutlineColor(sf::Color::Black);
         jetonsRect.setPosition(positionsJoueurs[i].x - 15, positionsJoueurs[i].y - 5);
         window.draw(jetonsRect);
         
-        // Petit indicateur de jetons
+        // Traits indicateurs de jetons
         int nbTraits = jetonsJoueurs[i] / 50;
         if (nbTraits > 5) nbTraits = 5;
-        
         for (int t = 0; t < nbTraits; t++) {
             sf::RectangleShape trait(sf::Vector2f(5, 10));
             trait.setFillColor(sf::Color::White);
             trait.setPosition(positionsJoueurs[i].x + 30 + t * 7, positionsJoueurs[i].y - 3);
             window.draw(trait);
         }
+        
+        // === PETITES CARTES DES JOUEURS ===
+        if (i < static_cast<int>(mainsJoueurs.size()) && !mainsJoueurs[i].empty()) {
+            for (int c = 0; c < static_cast<int>(mainsJoueurs[i].size()) && c < 2; c++) {
+                // Carte agrandie : 42x56 au lieu de 30x40
+                float carteW = 42.0f;
+                float carteH = 56.0f;
+                float carteX = positionsJoueurs[i].x + 5 + c * 36;
+                float carteY = positionsJoueurs[i].y - 40;
+
+                // Fond de la carte
+                sf::RectangleShape petiteCarte(sf::Vector2f(carteW, carteH));
+                petiteCarte.setFillColor(sf::Color::White);
+                petiteCarte.setOutlineThickness(1);
+                petiteCarte.setOutlineColor(sf::Color::Black);
+                petiteCarte.setPosition(carteX, carteY);
+                window.draw(petiteCarte);
+
+                // Rang en haut à gauche (plus grand)
+                sf::Text petitRang;
+                petitRang.setFont(police);
+                petitRang.setString(getSymboleCarte(mainsJoueurs[i][c]));
+                petitRang.setCharacterSize(14);
+                petitRang.setFillColor(getCouleurCarte(mainsJoueurs[i][c]));
+                petitRang.setStyle(sf::Text::Bold);
+                petitRang.setPosition(carteX + 3, carteY + 2);
+                window.draw(petitRang);
+
+                // Symbole de couleur au centre de la carte (taille 10)
+                dessinerSymboleCouleur(window, mainsJoueurs[i][c].couleur,
+                    sf::Vector2f(carteX + carteW / 2.0f, carteY + carteH / 2.0f + 4),
+                    10,
+                    getCouleurCarte(mainsJoueurs[i][c]));
+            }
+        }
+        // === FIN DES PETITES CARTES ===
     }
 }
 
 void TableDePoker::dessinerCartesCommunes() {
-    for (auto& carte : cartesCommunes) {
+    for (size_t i = 0; i < cartesCommunes.size(); i++) {
+        sf::RectangleShape carte(sf::Vector2f(80, 110));
+        carte.setFillColor(sf::Color::White);
+        carte.setOutlineThickness(2);
+        carte.setOutlineColor(sf::Color::Black);
+        carte.setPosition(350 + i * 90, 300);
         window.draw(carte);
         
-        // Dessiner un petit texte "?" sur chaque carte
-        sf::Text texteCarte;
-        texteCarte.setFont(police);
-        texteCarte.setString("?");
-        texteCarte.setCharacterSize(30);
-        texteCarte.setFillColor(sf::Color::Black);
-        texteCarte.setPosition(carte.getPosition().x + 35, carte.getPosition().y + 35);
-        window.draw(texteCarte);
+        // Si nous avons des cartes à afficher
+        if (i < cartes.size()) {
+            const Carte& c = cartes[i];
+            
+            // RANG en haut à gauche
+            sf::Text texteRang;
+            texteRang.setFont(police);
+            texteRang.setString(getSymboleCarte(c));
+            texteRang.setCharacterSize(24);
+            texteRang.setFillColor(getCouleurCarte(c));
+            texteRang.setStyle(sf::Text::Bold);
+            texteRang.setPosition(carte.getPosition().x + 10, carte.getPosition().y + 10);
+            window.draw(texteRang);
+            
+           
+            dessinerSymboleCouleur(window, c.couleur, 
+                sf::Vector2f(carte.getPosition().x + 40, carte.getPosition().y + 55), 
+                25,  // Taille un peu plus petite
+                getCouleurCarte(c));
+            
+            // RANG en bas à droite (petit)
+            sf::Text texteRangBas;
+            texteRangBas.setFont(police);
+            texteRangBas.setString(getSymboleCarte(c));
+            texteRangBas.setCharacterSize(16);
+            texteRangBas.setFillColor(getCouleurCarte(c));
+            texteRangBas.setStyle(sf::Text::Bold);
+            texteRangBas.setPosition(carte.getPosition().x + 55, carte.getPosition().y + 80);
+            window.draw(texteRangBas);
+        } else {
+            // Dos de carte
+            sf::RectangleShape dosCarte(sf::Vector2f(70, 100));
+            dosCarte.setFillColor(sf::Color(50, 50, 150));
+            dosCarte.setOutlineThickness(2);
+            dosCarte.setOutlineColor(sf::Color::White);
+            dosCarte.setPosition(carte.getPosition().x + 5, carte.getPosition().y + 5);
+            window.draw(dosCarte);
+            
+            sf::CircleShape motif(10);
+            motif.setFillColor(sf::Color::Red);
+            motif.setPosition(carte.getPosition().x + 30, carte.getPosition().y + 45);
+            window.draw(motif);
+        }
     }
 }
 
@@ -299,16 +377,17 @@ void TableDePoker::dessinerBoutons() {
     }
 }
 
- void TableDePoker::mettreAJourCartesCommunes(const std::vector<Carte>& cartes) {
-    // Cette fonction sera implémentée plus tard
-    // Pour l'instant, elle ne fait rien
+void TableDePoker::mettreAJourCartesCommunes(const std::vector<Carte>& nouvellesCartes) {
+    cartes = nouvellesCartes;
     std::cout << "Mise à jour des cartes communes (" << cartes.size() << " cartes)" << std::endl;
 }
 
 void TableDePoker::mettreAJourMainJoueur(int joueur, const std::vector<Carte>& main) {
-    // Cette fonction sera implémentée plus tard
-    // Pour l'instant, elle ne fait rien
-    std::cout << "Mise à jour de la main du joueur " << joueur << " (" << main.size() << " cartes)" << std::endl;
+    if (static_cast<int>(mainsJoueurs.size()) <= joueur) {
+        mainsJoueurs.resize(joueur + 1);
+    }
+    mainsJoueurs[joueur] = main;
+    std::cout << "Mise à jour de la main du joueur " << joueur + 1 << " (" << main.size() << " cartes)" << std::endl;
 }
 
 void TableDePoker::mettreAJourJetons(int joueur, int nouveauxJetons) {
@@ -388,4 +467,191 @@ void TableDePoker::setJoueurCourant(int joueur) {
 
 void TableDePoker::setMontantPot(int montant) {
     montantPot = montant;
+}
+
+//fonction pour montrer les cartes
+std::string TableDePoker::getSymboleCarte(const Carte& c) {
+    // Retourner le symbole du rang
+    switch(c.rang) {
+        case Rang::Deux:  return "2";
+        case Rang::Trois: return "3";
+        case Rang::Quatre: return "4";
+        case Rang::Cinq:  return "5";
+        case Rang::Six:   return "6";
+        case Rang::Sept:  return "7";
+        case Rang::Huit:  return "8";
+        case Rang::Neuf:  return "9";
+        case Rang::Dix:   return "10";
+        case Rang::Valet: return "J";
+        case Rang::Dame:  return "Q";
+        case Rang::Roi:   return "K";
+        case Rang::As:    return "A";
+        default: return "?";
+    }
+}
+
+sf::Color TableDePoker::getCouleurCarte(const Carte& c) {
+    // Retourner la couleur du texte selon l'enseigne
+    switch(c.couleur) {
+        case Couleur::Coeur:   
+        case Couleur::Carreau: return sf::Color::Red;   // Rouge pour ♥ et ♦
+        case Couleur::Pique:   
+        case Couleur::Trefle:  return sf::Color::Black; // Noir pour ♠ et ♣
+        default: return sf::Color::White;
+    }
+}
+
+std::string TableDePoker::getSymboleCouleur(const Carte& c) {
+    // Retourner le symbole de la COULEUR (♥ ♦ ♠ ♣)
+    switch(c.couleur) {
+        case Couleur::Coeur:   return "♥";
+        case Couleur::Carreau: return "♦";
+        case Couleur::Pique:   return "♠";
+        case Couleur::Trefle:  return "♣";
+        default: return "?";
+    }
+}
+
+void TableDePoker::dessinerSymboleCouleur(sf::RenderWindow& window, Couleur couleur, sf::Vector2f position, float taille, sf::Color teinte) {
+    switch(couleur) {
+        case Couleur::Coeur: {
+            // Cœur fidèle à l'image : deux gros lobes ronds en haut avec encoche, pointe effilée en bas
+            float r = taille / 2.0f;
+
+            // Lobe gauche — grand et rond
+            sf::CircleShape cercle1(r * 0.72f);
+            cercle1.setFillColor(teinte);
+            cercle1.setPosition(position.x - r * 1.38f, position.y - r * 1.1f);
+            window.draw(cercle1);
+
+            // Lobe droit — symétrique
+            sf::CircleShape cercle2(r * 0.72f);
+            cercle2.setFillColor(teinte);
+            cercle2.setPosition(position.x - r * 0.06f, position.y - r * 1.1f);
+            window.draw(cercle2);
+
+            // Corps : large en haut (couvrant les deux lobes en bas), pointe fine en bas
+            sf::ConvexShape corps;
+            corps.setPointCount(3);
+            corps.setPoint(0, sf::Vector2f(position.x - r * 1.4f, position.y - r * 0.25f));
+            corps.setPoint(1, sf::Vector2f(position.x + r * 1.4f, position.y - r * 0.25f));
+            corps.setPoint(2, sf::Vector2f(position.x,             position.y + r * 1.5f));
+            corps.setFillColor(teinte);
+            window.draw(corps);
+
+            // Pont pour combler le gap entre les cercles et le corps
+            sf::RectangleShape pont(sf::Vector2f(r * 2.8f, r * 0.7f));
+            pont.setFillColor(teinte);
+            pont.setPosition(position.x - r * 1.4f, position.y - r * 0.7f);
+            window.draw(pont);
+            break;
+        }
+        
+        case Couleur::Carreau: {
+            // Dessiner un carreau (losange)
+            sf::ConvexShape losange;
+            losange.setPointCount(4);
+            losange.setPoint(0, sf::Vector2f(position.x, position.y - taille/2));
+            losange.setPoint(1, sf::Vector2f(position.x + taille/2, position.y));
+            losange.setPoint(2, sf::Vector2f(position.x, position.y + taille/2));
+            losange.setPoint(3, sf::Vector2f(position.x - taille/2, position.y));
+            losange.setFillColor(teinte);
+            window.draw(losange);
+            break;
+        }
+        
+        case Couleur::Pique: {
+            // Pique : pointe fine en HAUT + deux lobes arrondis sur les côtés + tige+pied
+            float r = taille / 2.0f;
+
+            // Lobe gauche arrondi
+            sf::CircleShape lobeGauche(r * 0.62f);
+            lobeGauche.setFillColor(teinte);
+            lobeGauche.setPosition(position.x - r * 1.3f, position.y - r * 0.7f);
+            window.draw(lobeGauche);
+
+            // Lobe droit arrondi (symétrique)
+            sf::CircleShape lobeDroit(r * 0.62f);
+            lobeDroit.setFillColor(teinte);
+            lobeDroit.setPosition(position.x + r * 0.08f, position.y - r * 0.7f);
+            window.draw(lobeDroit);
+
+            // Triangle principal : pointe fine en haut, large en bas
+            sf::ConvexShape triangle;
+            triangle.setPointCount(3);
+            triangle.setPoint(0, sf::Vector2f(position.x,            position.y - r * 1.8f)); // pointe haut
+            triangle.setPoint(1, sf::Vector2f(position.x + r * 1.3f, position.y + r * 0.3f)); // bas droit
+            triangle.setPoint(2, sf::Vector2f(position.x - r * 1.3f, position.y + r * 0.3f)); // bas gauche
+            triangle.setFillColor(teinte);
+            window.draw(triangle);
+
+            // Pont pour combler gap entre lobes et triangle
+            sf::RectangleShape pont(sf::Vector2f(r * 2.6f, r * 0.5f));
+            pont.setFillColor(teinte);
+            pont.setPosition(position.x - r * 1.3f, position.y - r * 0.35f);
+            window.draw(pont);
+
+            // Tige fine centrée
+            sf::RectangleShape tige(sf::Vector2f(taille / 7.0f, taille / 2.5f));
+            tige.setFillColor(teinte);
+            tige.setPosition(position.x - taille / 14.0f, position.y + r * 0.3f);
+            window.draw(tige);
+
+            // Pied évasé
+            sf::ConvexShape pied;
+            pied.setPointCount(4);
+            float py = position.y + r * 0.3f + taille / 2.5f;
+            pied.setPoint(0, sf::Vector2f(position.x - taille / 14.0f, py));
+            pied.setPoint(1, sf::Vector2f(position.x + taille / 14.0f, py));
+            pied.setPoint(2, sf::Vector2f(position.x + taille / 3.5f,  py + taille / 8.0f));
+            pied.setPoint(3, sf::Vector2f(position.x - taille / 3.5f,  py + taille / 8.0f));
+            pied.setFillColor(teinte);
+            window.draw(pied);
+            break;
+        }
+        
+        case Couleur::Trefle: {
+            // Trèfle : 3 cercles égaux disposés comme sur une vraie carte
+            // r = rayon de chaque cercle
+            float r = taille / 3.0f;
+            // Centre de référence = position (centre du symbole)
+            // Cercle HAUT : centré au-dessus, horizontalement centré
+            // setPosition = coin haut-gauche du bounding box = centre - r
+            sf::CircleShape cercleHaut(r);
+            cercleHaut.setFillColor(teinte);
+            cercleHaut.setPosition(position.x - r, position.y - r * 2.2f);
+            window.draw(cercleHaut);
+
+            // Cercle BAS-GAUCHE : centré à gauche, niveau milieu
+            sf::CircleShape cercleBasGauche(r);
+            cercleBasGauche.setFillColor(teinte);
+            cercleBasGauche.setPosition(position.x - r * 2.1f, position.y - r * 0.9f);
+            window.draw(cercleBasGauche);
+
+            // Cercle BAS-DROIT : symétrique au bas-gauche
+            sf::CircleShape cercleBasDroit(r);
+            cercleBasDroit.setFillColor(teinte);
+            cercleBasDroit.setPosition(position.x + r * 0.1f, position.y - r * 0.9f);
+            window.draw(cercleBasDroit);
+
+            // Tige fine centrée
+            sf::RectangleShape tige(sf::Vector2f(taille / 7.0f, taille / 2.5f));
+            tige.setFillColor(teinte);
+            tige.setPosition(position.x - taille / 14.0f, position.y + r * 0.9f);
+            window.draw(tige);
+
+            // Pied évasé au bas de la tige
+            sf::ConvexShape pied;
+            pied.setPointCount(4);
+            float px = position.x;
+            float py = position.y + r * 0.9f + taille / 2.5f;
+            pied.setPoint(0, sf::Vector2f(px - taille / 14.0f, py));           // haut gauche
+            pied.setPoint(1, sf::Vector2f(px + taille / 14.0f, py));           // haut droit
+            pied.setPoint(2, sf::Vector2f(px + taille / 3.5f, py + taille / 8.0f)); // bas droit évasé
+            pied.setPoint(3, sf::Vector2f(px - taille / 3.5f, py + taille / 8.0f)); // bas gauche évasé
+            pied.setFillColor(teinte);
+            window.draw(pied);
+            break;
+        }
+    }
 }
