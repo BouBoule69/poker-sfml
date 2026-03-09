@@ -5,8 +5,9 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
+#include <random>
 using namespace std;
-
+extern std::mt19937 gen;  // défini dans poker2.cpp
 // Énumérations
 enum class Couleur { Coeur, Pique, Carreau, Trefle };
 enum class Rang { Deux, Trois, Quatre, Cinq, Six, Sept, Huit, Neuf, Dix, Valet, Dame, Roi, As };

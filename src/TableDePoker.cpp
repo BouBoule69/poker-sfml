@@ -88,7 +88,11 @@ TableDePoker::TableDePoker() {
     joueurCourant = 0;  // Initialisation
     // Ajoutez cette ligne à la fin du constructeur, avant l'accolade fermante
     montantPot = 0;  // Initialisation du pot à 0
-
+    panneauRaiseVisible = false;
+    montantRaiseSaisi   = 0;
+    texteRaiseSaisi     = "";
+    showdown = false;
+    joueursActifsAffichage.resize(6, true);
 }
 
 bool TableDePoker::estOuvert() {
@@ -173,6 +177,8 @@ void TableDePoker::dessinerTable() {
 
 void TableDePoker::dessinerJoueurs(int nbJoueurs) {
     for (int i = 0; i < nbJoueurs && i < 6; i++) {
+            // Ne pas dessiner les joueurs éliminés
+            if (jetonsJoueurs[i] < 0) continue;
         // Cercle du joueur
         sf::CircleShape cercleJoueur(35);
         
@@ -238,20 +244,19 @@ void TableDePoker::dessinerJoueurs(int nbJoueurs) {
         jetonsRect.setPosition(positionsJoueurs[i].x - 15, positionsJoueurs[i].y - 5);
         window.draw(jetonsRect);
         
-        // Traits indicateurs de jetons
-        int nbTraits = jetonsJoueurs[i] / 50;
-        if (nbTraits > 5) nbTraits = 5;
-        for (int t = 0; t < nbTraits; t++) {
-            sf::RectangleShape trait(sf::Vector2f(5, 10));
-            trait.setFillColor(sf::Color::White);
-            trait.setPosition(positionsJoueurs[i].x + 30 + t * 7, positionsJoueurs[i].y - 3);
-            window.draw(trait);
-        }
+        sf::Text texteJetonMontant;
+        texteJetonMontant.setFont(police);
+        texteJetonMontant.setString(std::to_string(jetonsJoueurs[i]) + " J");
+        texteJetonMontant.setCharacterSize(14);
+        texteJetonMontant.setFillColor(sf::Color::Black);
+        texteJetonMontant.setStyle(sf::Text::Bold);
+        texteJetonMontant.setPosition(positionsJoueurs[i].x - 5, positionsJoueurs[i].y + 42);
+        sf::RectangleShape fondJetons(sf::Vector2f(55, 18));
+        window.draw(texteJetonMontant);
         
         // === PETITES CARTES DES JOUEURS ===
         if (i < static_cast<int>(mainsJoueurs.size()) && !mainsJoueurs[i].empty()) {
             for (int c = 0; c < static_cast<int>(mainsJoueurs[i].size()) && c < 2; c++) {
-                // Carte agrandie : 42x56 au lieu de 30x40
                 float carteW = 42.0f;
                 float carteH = 56.0f;
                 float carteX = positionsJoueurs[i].x + 5 + c * 36;
@@ -265,24 +270,47 @@ void TableDePoker::dessinerJoueurs(int nbJoueurs) {
                 petiteCarte.setPosition(carteX, carteY);
                 window.draw(petiteCarte);
 
-                // Rang en haut à gauche (plus grand)
-                sf::Text petitRang;
-                petitRang.setFont(police);
-                petitRang.setString(getSymboleCarte(mainsJoueurs[i][c]));
-                petitRang.setCharacterSize(14);
-                petitRang.setFillColor(getCouleurCarte(mainsJoueurs[i][c]));
-                petitRang.setStyle(sf::Text::Bold);
-                petitRang.setPosition(carteX + 3, carteY + 2);
-                window.draw(petitRang);
+                // Joueur 0 = humain → toujours visible
+                // Autres joueurs → dos de carte sauf au showdown
+                // Révéler si : c'est l'humain, OU showdown ET joueur encore dans la main
+                bool estActif = (i < static_cast<int>(joueursActifsAffichage.size())) 
+                && joueursActifsAffichage[i];
 
-                // Symbole de couleur au centre de la carte (taille 10)
-                dessinerSymboleCouleur(window, mainsJoueurs[i][c].couleur,
-                    sf::Vector2f(carteX + carteW / 2.0f, carteY + carteH / 2.0f + 4),
-                    10,
-                    getCouleurCarte(mainsJoueurs[i][c]));
+                if (i == 0 || (showdown && estActif)) {
+                    // Rang en haut à gauche
+                    sf::Text petitRang;
+                    petitRang.setFont(police);
+                    petitRang.setString(getSymboleCarte(mainsJoueurs[i][c]));
+                    petitRang.setCharacterSize(14);
+                    petitRang.setFillColor(getCouleurCarte(mainsJoueurs[i][c]));
+                    petitRang.setStyle(sf::Text::Bold);
+                    petitRang.setPosition(carteX + 3, carteY + 2);
+                    window.draw(petitRang);
+
+                    // Symbole couleur au centre
+                    dessinerSymboleCouleur(window, mainsJoueurs[i][c].couleur,
+                        sf::Vector2f(carteX + carteW / 2.0f, carteY + carteH / 2.0f + 4),
+                        10,
+                        getCouleurCarte(mainsJoueurs[i][c]));
+                } else {
+                    // Dos de carte pour les bots
+                    sf::RectangleShape dos(sf::Vector2f(carteW - 4, carteH - 4));
+                    dos.setFillColor(sf::Color(50, 50, 150));
+                    dos.setOutlineThickness(1);
+                    dos.setOutlineColor(sf::Color::White);
+                    dos.setPosition(carteX + 2, carteY + 2);
+                    window.draw(dos);
+
+                    // Petit motif au centre
+                    sf::CircleShape motif(6);
+                    motif.setFillColor(sf::Color::Red);
+                    motif.setPosition(carteX + carteW/2 - 6, carteY + carteH/2 - 6);
+                    window.draw(motif);
+                }
             }
         }
         // === FIN DES PETITES CARTES ===
+        
     }
 }
 
@@ -374,6 +402,75 @@ void TableDePoker::dessinerBoutons() {
         );
         
         window.draw(texteBouton);
+    }
+    // Panneau de saisie du raise
+    if (panneauRaiseVisible) {
+        // Fond du panneau
+        sf::RectangleShape fond(sf::Vector2f(300, 60));
+        fond.setFillColor(sf::Color(30, 30, 30, 230));
+        fond.setOutlineThickness(2);
+        fond.setOutlineColor(sf::Color::White);
+        fond.setPosition(420, 610);
+        window.draw(fond);
+
+        // Label
+        sf::Text label;
+        label.setFont(police);
+        label.setString("Raise :");
+        label.setCharacterSize(16);
+        label.setFillColor(sf::Color::White);
+        label.setPosition(428, 622);
+        window.draw(label);
+
+        // Champ de saisie
+        sf::RectangleShape champ(sf::Vector2f(90, 28));
+        champ.setFillColor(sf::Color::White);
+        champ.setOutlineThickness(2);
+        champ.setOutlineColor(sf::Color::Yellow);
+        champ.setPosition(430, 618);
+        window.draw(champ);
+
+        sf::Text valeur;
+        valeur.setFont(police);
+        valeur.setString(texteRaiseSaisi);
+        valeur.setCharacterSize(16);
+        valeur.setFillColor(sf::Color::Black);
+        valeur.setPosition(435, 622);
+        window.draw(valeur);
+
+        // Bouton OK
+        sf::RectangleShape btnOk(sf::Vector2f(80, 36));
+        btnOk.setFillColor(sf::Color(0, 180, 0));
+        btnOk.setOutlineThickness(2);
+        btnOk.setOutlineColor(sf::Color::White);
+        btnOk.setPosition(530, 618);
+        window.draw(btnOk);
+
+        sf::Text txtOk;
+        txtOk.setFont(police);
+        txtOk.setString("OK");
+        txtOk.setCharacterSize(16);
+        txtOk.setFillColor(sf::Color::White);
+        txtOk.setStyle(sf::Text::Bold);
+        txtOk.setPosition(558, 624);
+        window.draw(txtOk);
+
+        // Bouton All-In
+        sf::RectangleShape btnAllIn(sf::Vector2f(90, 36));
+        btnAllIn.setFillColor(sf::Color(200, 100, 0));
+        btnAllIn.setOutlineThickness(2);
+        btnAllIn.setOutlineColor(sf::Color::White);
+        btnAllIn.setPosition(620, 618);
+        window.draw(btnAllIn);
+
+        sf::Text txtAllIn;
+        txtAllIn.setFont(police);
+        txtAllIn.setString("All-In");
+        txtAllIn.setCharacterSize(16);
+        txtAllIn.setFillColor(sf::Color::White);
+        txtAllIn.setStyle(sf::Text::Bold);
+        txtAllIn.setPosition(630, 624);
+        window.draw(txtAllIn);
     }
 }
 
@@ -654,4 +751,56 @@ void TableDePoker::dessinerSymboleCouleur(sf::RenderWindow& window, Couleur coul
             break;
         }
     }
+}
+
+void TableDePoker::afficherPanneauRaise(int miseMin, int miseMax) {
+    panneauRaiseVisible = true;
+    montantRaiseSaisi   = miseMin;
+    texteRaiseSaisi     = std::to_string(miseMin);
+}
+
+void TableDePoker::cacherPanneauRaise() {
+    panneauRaiseVisible = false;
+    texteRaiseSaisi     = "";
+    montantRaiseSaisi   = 0;
+}
+
+bool TableDePoker::boutonRaiseConfirmerClique(sf::Vector2f souris) {
+    // Bouton OK : rectangle vert à droite du champ de saisie
+    sf::FloatRect zone(530, 618, 80, 36);
+    return zone.contains(souris);
+}
+
+bool TableDePoker::boutonRaiseAllInClique(sf::Vector2f souris) {
+    // Bouton All-In : rectangle orange
+    sf::FloatRect zone(620, 618, 90, 36);
+    return zone.contains(souris);
+}
+
+void TableDePoker::gererSaisieRaise(sf::Event& event) {
+    if (!panneauRaiseVisible) return;
+    if (event.type == sf::Event::TextEntered) {
+        char c = static_cast<char>(event.text.unicode);
+        if (c >= '0' && c <= '9') {
+            if (texteRaiseSaisi.size() < 6)
+                texteRaiseSaisi += c;
+        } else if (event.text.unicode == 8) { // Backspace
+            if (!texteRaiseSaisi.empty())
+                texteRaiseSaisi.pop_back();
+        }
+        // Convertir en int
+        try {
+            montantRaiseSaisi = texteRaiseSaisi.empty() ? 0 : std::stoi(texteRaiseSaisi);
+        } catch (...) {
+            montantRaiseSaisi = 0;
+        }
+    }
+}
+
+void TableDePoker::setShowdown(bool valeur) {
+    showdown = valeur;
+}
+
+void TableDePoker::setJoueursActifs(const std::vector<bool>& actifs) {
+    joueursActifsAffichage = actifs;
 }

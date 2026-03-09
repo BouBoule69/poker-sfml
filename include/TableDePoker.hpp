@@ -41,7 +41,12 @@ private:
     int montantPot;  // Pour stocker le montant du pot
     std::vector<Carte> cartes;  // Pour stocker les vraies cartes communes
     std::vector<std::vector<Carte>> mainsJoueurs;  // Pour stocker les mains de chaque joueur
-
+    // Panneau de saisie du raise
+    bool      panneauRaiseVisible;
+    int       montantRaiseSaisi;
+    std::string texteRaiseSaisi;
+    bool showdown;  // true = on révèle toutes les cartes
+    std::vector<bool> joueursActifsAffichage;  // pour savoir qui révéler au showdown
 public:
     TableDePoker();
     bool estOuvert();
@@ -87,6 +92,15 @@ public:
     // Dans la section public:, ajoutez :
     void dessinerSymboleCouleur(sf::RenderWindow& window, Couleur couleur, sf::Vector2f position, float taille, sf::Color teinte);
 
+    void afficherPanneauRaise(int miseMin, int miseMax);
+    void cacherPanneauRaise();
+    bool panneauRaiseEstVisible() const { return panneauRaiseVisible; }
+    int  getMontantRaiseSaisi()   const { return montantRaiseSaisi; }
+    bool boutonRaiseConfirmerClique(sf::Vector2f souris);
+    bool boutonRaiseAllInClique(sf::Vector2f souris);
+    void gererSaisieRaise(sf::Event& event);
+    void setShowdown(bool valeur);
+    void setJoueursActifs(const std::vector<bool>& actifs);
     // Getters
     sf::RenderWindow& getWindow() { return window; }
 };
